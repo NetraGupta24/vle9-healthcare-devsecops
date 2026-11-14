@@ -6,7 +6,7 @@
 
 Everything runs on **one AWS EC2 instance** (`m7i-flex.large`, Free-plan eligible) created by Terraform, with Kubernetes provided by **minikube**.
 
-> Status: see [docs/VERIFICATION.md](docs/VERIFICATION.md) for exactly what has been run and what still needs your AWS account.
+> Status: deployed and verified on AWS on 2026-11-14 (two green Jenkins runs, all security alerts fired). Details and every problem found on the way: [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 ---
 
