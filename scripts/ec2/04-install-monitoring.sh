@@ -16,11 +16,11 @@ helm repo update prometheus-community >/dev/null
 
 kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
 
-info "Grafana admin password (random, stored in a Kubernetes Secret)"
+info "Grafana admin password (random, stored in a Kubernetes Secret, no trailing newline)"
 random_secret "$SECRETS_DIR/grafana-admin-password" sh -c 'openssl rand -base64 24 | tr -dc A-Za-z0-9 | cut -c1-20'
 kubectl -n monitoring create secret generic grafana-admin \
   --from-literal=admin-user=admin \
-  --from-file=admin-password="$SECRETS_DIR/grafana-admin-password" \
+  --from-file=admin-password=<(printf '%s' "$(cat "$SECRETS_DIR/grafana-admin-password")") \
   --dry-run=client -o yaml | kubectl apply --server-side --field-manager=medsecure-setup -f - >/dev/null
 
 info "kube-prometheus-stack $CHART_VERSION (this takes a few minutes)"
