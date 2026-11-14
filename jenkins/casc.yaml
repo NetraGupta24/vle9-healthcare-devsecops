@@ -1,0 +1,75 @@
+# Jenkins Configuration as Code (JCasC) for the VLE-9 lab.
+# Rendered by scripts/ec2/05-configure-jenkins.sh into
+# /var/lib/jenkins/casc_configs/jenkins.yaml (__REPO_URL__/__BRANCH__ replaced).
+#
+# ${name} values are read from files in /var/lib/jenkins/casc_secrets/
+# (SECRETS env var, mode 600, owner jenkins) - no secret is stored here or in Git.
+jenkins:
+  systemMessage: "VLE-9 Healthcare DevSecOps - MedSecure secure pipeline"
+  numExecutors: 2
+  mode: NORMAL
+  markupFormatter: plainText
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          name: "Lab Administrator"
+          password: "${jenkinsAdminPassword}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  # CSRF protection (agent-to-controller security is always on in current Jenkins).
+  crumbIssuer: "standard"
+
+unclassified:
+  location:
+    url: "http://localhost:18080/"
+    adminAddress: "jenkins@medsecure.local"
+  sonarGlobalConfiguration:
+    buildWrapperEnabled: true
+    installations:
+      - name: "sonarqube"
+        serverUrl: "http://localhost:9000"
+        credentialsId: "sonarqube-token"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              scope: GLOBAL
+              id: "sonarqube-token"
+              description: "SonarQube token of the non-admin 'jenkins' user"
+              secret: "${sonarToken}"
+          - file:
+              scope: GLOBAL
+              id: "medsecure-app-secrets"
+              description: "MedSecure app secrets (env file) -> K8s Secret patient-api-secrets"
+              fileName: "app-secrets.env"
+              secretBytes: "${readFileBase64:/var/lib/jenkins/casc_secrets/app-secrets.env}"
+          - file:
+              scope: GLOBAL
+              id: "jenkins-deployer-kubeconfig"
+              description: "Least-privilege kubeconfig: ServiceAccount healthcare/jenkins-deployer"
+              fileName: "jenkins-deployer.kubeconfig"
+              secretBytes: "${readFileBase64:/var/lib/jenkins/casc_secrets/jenkins-deployer.kubeconfig}"
+
+jobs:
+  - script: |
+      pipelineJob('medsecure-devsecops') {
+        description('VLE-9: Secure DevSecOps pipeline for the MedSecure healthcare app (Jenkinsfile in the repo)')
+        logRotator { numToKeep(15) }
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('__REPO_URL__') }
+                branch('*/__BRANCH__')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }

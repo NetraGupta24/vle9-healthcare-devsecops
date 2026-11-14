@@ -1,0 +1,34 @@
+# OWASP ZAP baseline rules for MedSecure (Step 8).
+# Format: <rule id><TAB><IGNORE|INFO|WARN|FAIL><TAB>(<rule name>) [justification]
+# Rules not listed here default to WARN. FAIL = the pipeline stops and the
+# deployment is rolled back.
+#
+# --- Must never regress: security headers and information leaks -> FAIL ---
+10003	FAIL	(Vulnerable JS Library)
+10010	FAIL	(Cookie No HttpOnly Flag)
+10011	FAIL	(Cookie Without Secure Flag)
+10015	FAIL	(Re-examine Cache-control Directives) PHI must never be cached
+10017	FAIL	(Cross-Domain JavaScript Source File Inclusion)
+10019	FAIL	(Content-Type Header Missing)
+10020	FAIL	(Missing Anti-clickjacking Header)
+10021	FAIL	(X-Content-Type-Options Header Missing)
+10023	FAIL	(Information Disclosure - Debug Error Messages)
+10024	FAIL	(Information Disclosure - Sensitive Information in URL)
+10025	FAIL	(Information Disclosure - Sensitive Information in HTTP Referrer Header)
+10035	FAIL	(Strict-Transport-Security Header Not Set)
+10036	FAIL	(Server Leaks Version Information via "Server" HTTP Response Header Field)
+10037	FAIL	(Server Leaks Information via "X-Powered-By" HTTP Response Header Field(s))
+10038	FAIL	(Content Security Policy (CSP) Header Not Set)
+10054	FAIL	(Cookie without SameSite Attribute)
+10055	FAIL	(CSP: Wildcard / unsafe-inline / unsafe-eval directives)
+10056	FAIL	(X-Debug-Token Information Leak)
+10062	FAIL	(PII Disclosure) patient data must never appear in unauthenticated pages
+10063	FAIL	(Permissions Policy Header Not Set)
+10098	FAIL	(Cross-Domain Misconfiguration)
+90004	FAIL	(Insufficient Site Isolation Against Spectre Vulnerability)
+90022	FAIL	(Application Error Disclosure)
+90033	FAIL	(Loosely Scoped Cookie)
+2	FAIL	(Private IP Disclosure)
+3	FAIL	(Session ID in URL Rewrite)
+10202	IGNORE	(Absence of Anti-CSRF Tokens) the API authenticates with a Bearer token in the Authorization header and sets no cookies, so cross-site requests carry no credentials - CSRF does not apply
+10109	IGNORE	(Modern Web Application) informational only

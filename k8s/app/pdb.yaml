@@ -1,0 +1,11 @@
+# Keep at least one replica serving during node drains / maintenance.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: patient-api
+  namespace: healthcare
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: patient-api

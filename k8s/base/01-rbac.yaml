@@ -1,0 +1,88 @@
+# Step 7 - RBAC (least privilege). Applied ONCE by the cluster administrator.
+#
+# Two identities:
+#   1. patient-api      - the application pods. Needs NO Kubernetes API access,
+#                         so it gets no Role and its token is not even mounted.
+#   2. jenkins-deployer - what the Jenkins pipeline uses to deploy. It can only
+#                         touch the app's own objects in the "healthcare"
+#                         namespace: no delete, no exec into pods, no RBAC,
+#                         Service or NetworkPolicy changes, no other namespaces,
+#                         and it can read exactly one Secret (patient-api-secrets).
+#
+# Check it:  kubectl auth can-i --list -n healthcare \
+#              --as=system:serviceaccount:healthcare:jenkins-deployer
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: patient-api
+  namespace: healthcare
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins-deployer
+  namespace: healthcare
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: healthcare-deployer
+  namespace: healthcare
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"] # needed by `kubectl rollout status/undo`
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  # Services are admin-owned (k8s/base/04-services.yaml): changing a Service
+  # selector could redirect patient traffic, so the pipeline may only read them.
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  # Secrets: may create, and may read/update ONLY the app's own Secret.
+  # ("create" cannot be limited by name in Kubernetes RBAC.)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["patient-api-secrets"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-deployer
+  namespace: healthcare
+subjects:
+  - kind: ServiceAccount
+    name: jenkins-deployer
+    namespace: healthcare
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: healthcare-deployer
+---
+# Long-lived token for the Jenkins kubeconfig (scripts/make-jenkins-kubeconfig.sh
+# reads it). Stored in Jenkins as a "Secret file" credential, never in Git.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jenkins-deployer-token
+  namespace: healthcare
+  annotations:
+    kubernetes.io/service-account.name: jenkins-deployer
+type: kubernetes.io/service-account-token

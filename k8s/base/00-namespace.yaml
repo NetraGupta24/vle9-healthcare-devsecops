@@ -1,0 +1,16 @@
+# Applied ONCE by the cluster administrator (not by Jenkins).
+#
+# Pod Security Admission "restricted" = the strictest built-in profile.
+# The API server will REJECT any pod in this namespace that runs as root,
+# allows privilege escalation, keeps Linux capabilities, uses hostPath, etc.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: healthcare
+  labels:
+    app.kubernetes.io/part-of: medsecure
+    data-classification: phi
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

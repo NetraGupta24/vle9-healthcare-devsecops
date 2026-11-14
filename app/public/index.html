@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MedSecure Patient Records</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+  <!-- All forms use method="post": if JavaScript fails to load, a browser falls back to a
+       plain form submit, and with the default GET the password and PHI would end up in the
+       URL (server logs, proxies, browser history). Found by the OWASP ZAP stage (rule 10024). -->
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">+</span>
+      <div>
+        <h1>MedSecure</h1>
+        <p class="tagline">Patient records &middot; PHI encrypted at rest (AES-256-GCM)</p>
+      </div>
+    </div>
+    <div id="session" class="session" hidden>
+      <span id="whoami"></span>
+      <span id="role-badge" class="badge"></span>
+      <button id="logout" type="button" class="secondary">Log out</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="login-view" class="card narrow">
+      <h2>Staff sign in</h2>
+      <form id="login-form" method="post" autocomplete="off">
+        <label for="username">Username</label>
+        <input id="username" name="username" required maxlength="64" placeholder="dr.mehta">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required maxlength="128">
+        <button type="submit">Sign in</button>
+        <p id="login-error" class="error" role="alert" hidden></p>
+      </form>
+      <p class="hint">Accounts: <code>dr.mehta</code> (doctor), <code>nurse.priya</code> (nurse),
+        <code>desk.ravi</code> (receptionist). Passwords come from the Kubernetes Secret.</p>
+    </section>
+
+    <section id="app-view" hidden>
+      <div class="grid">
+        <div class="card">
+          <div class="card-head">
+            <h2>Patients</h2>
+            <button id="refresh" type="button" class="secondary">Refresh</button>
+          </div>
+          <table>
+            <thead><tr><th>Name</th><th>Age</th><th>Gender</th><th>Blood</th></tr></thead>
+            <tbody id="patient-rows"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>Record</h2>
+          <p id="detail-empty" class="muted">Select a patient to view their record. Every view is audit-logged.</p>
+          <dl id="detail" hidden></dl>
+          <form id="clinical-form" method="post" hidden>
+            <h3>Update clinical record <span class="badge">doctor only</span></h3>
+            <label for="diagnosis">Diagnosis</label>
+            <input id="diagnosis" name="diagnosis" maxlength="500">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" maxlength="2000" rows="3"></textarea>
+            <button type="submit">Save</button>
+            <p id="clinical-msg" class="msg" role="status" hidden></p>
+          </form>
+        </div>
+      </div>
+
+      <div id="register-card" class="card" hidden>
+        <h2>Register patient</h2>
+        <form id="register-form" method="post" class="form-grid">
+          <div><label for="firstName">First name</label><input id="firstName" name="firstName" required maxlength="50"></div>
+          <div><label for="lastName">Last name</label><input id="lastName" name="lastName" required maxlength="50"></div>
+          <div><label for="dateOfBirth">Date of birth</label><input id="dateOfBirth" name="dateOfBirth" type="date" required></div>
+          <div><label for="gender">Gender</label>
+            <select id="gender" name="gender">
+              <option value="female">Female</option><option value="male">Male</option>
+              <option value="other">Other</option><option value="unknown">Unknown</option>
+            </select></div>
+          <div><label for="bloodGroup">Blood group</label>
+            <select id="bloodGroup" name="bloodGroup">
+              <option>unknown</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+              <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+            </select></div>
+          <div><label for="phone">Phone</label><input id="phone" name="phone" required placeholder="+919800000000"></div>
+          <div><label for="nationalId">National ID (12 digits)</label><input id="nationalId" name="nationalId" required inputmode="numeric" maxlength="12"></div>
+          <div><label for="allergies">Allergies (comma separated)</label><input id="allergies" name="allergies" maxlength="300"></div>
+          <div class="full"><button type="submit">Register</button>
+            <p id="register-msg" class="msg" role="status" hidden></p></div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer>VLE-9 Healthcare DevSecOps lab &middot; synthetic data only</footer>
+</body>
+</html>

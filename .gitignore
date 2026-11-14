@@ -1,0 +1,26 @@
+# Secrets and credentials - never commit
+*.env
+.env*
+*.pem
+*.key
+*.kubeconfig
+kubeconfig*
+.medsecure/
+
+# Node
+app/node_modules/
+app/coverage/
+
+# Scan output and build artefacts
+reports/
+.scannerwork/
+
+# Terraform state contains resource details; keep it local
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/*.tfplan
+infra/terraform/tfplan
+infra/terraform/terraform.tfvars
+infra/terraform/.terraform.lock.hcl.bak
+crash.log

@@ -1,0 +1,163 @@
+# Step 9 - Prometheus + Grafana + Alertmanager (kube-prometheus-stack chart).
+#
+# Installed by scripts/ec2/05-install-monitoring.sh:
+#   helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+#     --namespace monitoring --create-namespace --version 93.3.0 \
+#     -f monitoring/kube-prometheus-stack-values.yaml
+#
+# Sized for one minikube node on an m7i-flex.large (2 vCPU / 8 GiB).
+
+# Control-plane components that minikube does not expose to Prometheus would
+# show as permanent false "...Down" alerts, so they are switched off.
+defaultRules:
+  create: true
+  rules:
+    etcd: false
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeProxy: false
+    windows: false
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    retention: 3d
+    retentionSize: 3GB
+    # Pick up ServiceMonitors / PrometheusRules from every namespace.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 400Mi
+      limits:
+        memory: 1Gi
+
+# Alertmanager: security alerts go to the security team, availability
+# alerts to on-call. Both inboxes are in Mailpit (monitoring/mailpit.yaml),
+# a fake SMTP server with a web UI, so no real email credentials are needed.
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi
+  config:
+    global:
+      resolve_timeout: 5m
+      smtp_smarthost: mailpit.monitoring.svc.cluster.local:1025
+      smtp_from: alertmanager@medsecure.local
+      smtp_require_tls: false
+    route:
+      receiver: oncall
+      group_by: [alertname, namespace]
+      group_wait: 30s
+      group_interval: 2m
+      repeat_interval: 4h
+      routes:
+        - receiver: "null"
+          matchers: ['alertname=~"Watchdog|InfoInhibitor"']
+        - receiver: security-team
+          matchers: ['category="security"']
+          repeat_interval: 1h
+        - receiver: oncall
+          matchers: ['category="availability"']
+    inhibit_rules:
+      - source_matchers: ['alertname="PatientAPIDown"']
+        target_matchers: ['alertname=~"PatientAPIHighErrorRate|PatientAPIHighCPU"']
+      - source_matchers: ['alertname="InfoInhibitor"']
+        target_matchers: ['severity="info"']
+        equal: [namespace]
+    receivers:
+      - name: "null"
+      - name: security-team
+        email_configs:
+          - to: security-team@medsecure.local
+            send_resolved: true
+      - name: oncall
+        email_configs:
+          - to: oncall@medsecure.local
+            send_resolved: true
+    templates:
+      - /etc/alertmanager/config/*.tmpl
+
+grafana:
+  # Admin password comes from a Secret created with a random value by
+  # scripts/ec2/05-install-monitoring.sh (nothing in Git).
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  defaultDashboardsTimezone: browser
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+  grafana.ini:
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false
+      check_for_plugin_updates: false
+    security:
+      disable_gravatar: true
+      cookie_samesite: strict
+      allow_embedding: false
+    users:
+      allow_sign_up: false
+    auth.anonymous:
+      enabled: false
+    # Grafana 13 starts a process per bundled data-source plugin and downloads
+    # extra plugins on start: too heavy for a lab node. Only Prometheus and
+    # Alertmanager are used here.
+    plugins:
+      preinstall_disabled: true
+      disable_plugins: elasticsearch,grafana-postgresql-datasource,grafana-pyroscope-datasource,influxdb,jaeger,loki,mssql,mysql,opentsdb,stackdriver,tempo,zipkin
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 768Mi
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      memory: 64Mi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi

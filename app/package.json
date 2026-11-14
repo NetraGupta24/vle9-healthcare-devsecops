@@ -1,0 +1,27 @@
+{
+  "name": "medsecure-patient-api",
+  "version": "1.0.0",
+  "description": "MedSecure: a small patient-records API for the VLE-9 Healthcare DevSecOps lab (PHI encrypted at rest, RBAC, audit logging, Prometheus metrics).",
+  "private": true,
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "test:coverage": "mkdir -p coverage && node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test-reporter=junit --test-reporter-destination=coverage/junit.xml \"test/**/*.test.js\""
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "5.3.0",
+    "express-rate-limit": "8.7.4",
+    "helmet": "8.3.0",
+    "jsonwebtoken": "9.0.3",
+    "prom-client": "15.1.3",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "supertest": "7.3.2"
+  }
+}

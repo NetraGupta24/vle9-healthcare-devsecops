@@ -1,0 +1,14 @@
+# Accepted risks for `trivy fs` (scripts/ci/sca-scan.sh --ignorefile).
+# Every entry needs a justification and an expiry date, after which the
+# finding blocks the pipeline again and must be re-reviewed.
+misconfigurations:
+  - id: AWS-0104
+    paths:
+      - "infra/terraform/security.tf"
+    statement: >-
+      Egress is limited to TCP 80/443 (not all ports). The host must reach apt
+      mirrors, Docker Hub, ghcr.io, GitHub, Helm and Jenkins update sites, whose
+      IP ranges are large and change constantly. A domain allow-list would need
+      AWS Network Firewall or an egress proxy, which the Free plan lab cannot
+      afford. Production: route egress through a filtering proxy / Network Firewall.
+    expired_at: 2027-01-31

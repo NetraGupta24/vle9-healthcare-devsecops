@@ -1,0 +1,134 @@
+# Step 9 - Alert rules for the healthcare app.
+#
+# category=security     -> security-team inbox     (unauthorised access,
+#                          failed logins / brute force, privilege abuse,
+#                          bulk PHI access, crypto-mining-like CPU)
+# category=availability -> on-call inbox
+#
+# Test them: scripts/demo/trigger-alerts.sh (see docs/DEMO.md).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: medsecure-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/part-of: medsecure
+spec:
+  groups:
+    - name: medsecure.security
+      rules:
+        - alert: FailedLoginBurst
+          expr: sum(increase(auth_login_failures_total{namespace="healthcare"}[5m])) > 10
+          labels:
+            severity: warning
+            category: security
+          annotations:
+            summary: "Failed logins: {{ $value | humanize }} in the last 5 minutes"
+            description: >-
+              More than 10 failed staff logins in 5 minutes. Possible brute-force or
+              credential-stuffing attack against the patient records system. Check the
+              audit log: kubectl -n healthcare logs deploy/patient-api | grep '"action":"login"'
+
+        - alert: AccountLockedOut
+          expr: sum(increase(auth_account_lockouts_total{namespace="healthcare"}[10m])) > 0
+          labels:
+            severity: critical
+            category: security
+          annotations:
+            summary: "A staff account was locked after repeated failed logins"
+            description: >-
+              An account hit MAX_FAILED_LOGINS and was locked. Confirm with the staff
+              member whether it was them; if not, treat it as an active attack.
+
+        - alert: UnauthorizedAccessSpike
+          expr: sum(increase(auth_unauthorized_requests_total{namespace="healthcare"}[5m])) > 20
+          labels:
+            severity: warning
+            category: security
+          annotations:
+            summary: "Unauthorised API requests: {{ $value | humanize }} in 5 minutes"
+            description: >-
+              Many requests to PHI endpoints without a valid token (missing, forged or
+              expired JWT). Possible scanning or token-forgery attempt.
+
+        - alert: PrivilegeEscalationAttempt
+          expr: sum(increase(auth_unauthorized_requests_total{namespace="healthcare",reason="forbidden_role"}[5m])) > 3
+          labels:
+            severity: critical
+            category: security
+          annotations:
+            summary: "Authenticated users repeatedly tried actions their role forbids"
+            description: >-
+              A logged-in user tried role-restricted actions (for example a nurse editing
+              diagnoses) more than 3 times in 5 minutes. Possible insider misuse or a
+              stolen low-privilege account.
+
+        - alert: PHIBulkAccess
+          expr: sum by (role) (increase(phi_records_accessed_total{namespace="healthcare",action="read"}[5m])) > 50
+          labels:
+            severity: critical
+            category: security
+          annotations:
+            summary: "Bulk access to patient records by role {{ $labels.role }}"
+            description: >-
+              More than 50 individual patient records were read in 5 minutes by one role.
+              Possible data exfiltration (HIPAA breach risk). Review the audit log.
+
+        - alert: PatientAPIHighCPU
+          expr: |
+            sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="healthcare",container="patient-api"}[2m]))
+              /
+            sum by (pod) (kube_pod_container_resource_limits{namespace="healthcare",container="patient-api",resource="cpu"})
+              > 0.8
+          for: 2m
+          labels:
+            severity: warning
+            category: security
+          annotations:
+            summary: "Pod {{ $labels.pod }} uses {{ $value | humanizePercentage }} of its CPU limit"
+            description: >-
+              Sustained CPU above 80% of the limit. Either real overload or something
+              unexpected running in the container (for example a crypto-miner after a
+              compromise). Check: kubectl -n healthcare top pod; compare with request rate.
+
+    - name: medsecure.availability
+      rules:
+        - alert: PatientAPIDown
+          expr: absent(up{namespace="healthcare",service="patient-api-metrics"} == 1)
+          for: 1m
+          labels:
+            severity: critical
+            category: availability
+          annotations:
+            summary: "No patient-api instance is up"
+            description: "Prometheus cannot scrape any patient-api pod. Clinicians cannot reach patient records."
+
+        - alert: PatientAPIHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{namespace="healthcare",status_code=~"5.."}[5m]))
+              /
+            clamp_min(sum(rate(http_requests_total{namespace="healthcare"}[5m])), 1e-9)
+              > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            category: availability
+          annotations:
+            summary: "{{ $value | humanizePercentage }} of patient-api requests fail with 5xx"
+
+        - alert: PatientAPIPodRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace="healthcare"}[15m]) > 2
+          labels:
+            severity: warning
+            category: availability
+          annotations:
+            summary: "Pod {{ $labels.pod }} restarted {{ $value | humanize }} times in 15 minutes"
+
+        - alert: NodeHighCPU
+          expr: 100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 85
+          for: 10m
+          labels:
+            severity: warning
+            category: availability
+          annotations:
+            summary: "Node CPU at {{ $value | humanize }}%"

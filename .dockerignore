@@ -1,0 +1,8 @@
+# Allow-list: send ONLY what the image needs to the Docker build context.
+# This keeps secrets (.env, kubeconfigs, terraform state, reports) out of
+# image layers even if they exist in the working directory.
+*
+!app/package.json
+!app/package-lock.json
+!app/src/
+!app/public/

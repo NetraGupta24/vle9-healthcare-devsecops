@@ -1,0 +1,12 @@
+# The handout's Step 5 Dockerfile, made runnable (FROM + adduser + USER and
+# the app files). Used ONLY by scripts/demo/vulnerable-image-demo.sh to show
+# what the Trivy gate catches. Do not deploy.
+FROM node:18-alpine
+RUN adduser -D appuser
+WORKDIR /app
+COPY app/package.json app/package-lock.json ./
+RUN npm ci --omit=dev
+COPY app/src ./src
+COPY app/public ./public
+USER appuser
+CMD ["node", "src/server.js"]

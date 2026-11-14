@@ -1,0 +1,20 @@
+# Non-secret settings only. Secrets live in the "patient-api-secrets" Secret,
+# which is created from Jenkins credentials (never committed to Git).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: patient-api-config
+  namespace: healthcare
+  labels:
+    app.kubernetes.io/name: patient-api
+    app.kubernetes.io/part-of: medsecure
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  METRICS_PORT: "9464"
+  SESSION_TTL_SECONDS: "900"
+  MAX_FAILED_LOGINS: "5"
+  LOCKOUT_SECONDS: "900"
+  LOGIN_RATE_LIMIT: "20"
+  API_RATE_LIMIT: "300"
+  SEED_DEMO_DATA: "true"

@@ -1,0 +1,43 @@
+# Applied ONCE by the cluster administrator (not by Jenkins): the Services
+# decide which pods receive traffic, so the pipeline may not change them
+# (Trivy KSV-0056 - traffic interception).
+# Public API service. NodePort 30080 is reachable only inside the EC2 host
+# (minikube's network). Users reach it through an SSH tunnel, never directly
+# from the internet (the EC2 security group does not open it).
+apiVersion: v1
+kind: Service
+metadata:
+  name: patient-api
+  namespace: healthcare
+  labels:
+    app.kubernetes.io/name: patient-api
+    app.kubernetes.io/part-of: medsecure
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: patient-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      nodePort: 30080
+---
+# Metrics service: separate, ClusterIP only, scraped by Prometheus through
+# monitoring/servicemonitor.yaml. Not part of the public service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: patient-api-metrics
+  namespace: healthcare
+  labels:
+    app.kubernetes.io/name: patient-api
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: medsecure
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: patient-api
+  ports:
+    - name: metrics
+      port: 9464
+      targetPort: metrics

@@ -1,0 +1,74 @@
+# Network segmentation (zero trust inside the cluster). Applied ONCE by the
+# cluster administrator, so a developer cannot loosen it from the pipeline.
+#
+# Requires a CNI that enforces NetworkPolicy: minikube is started with
+# --cni=calico (scripts/ec2/03-start-minikube.sh). The default minikube network
+# plugin silently IGNORES these objects.
+#
+#   default-deny-all       nothing in or out unless allowed below
+#   allow-api-http         API port 3000 reachable (it is protected by JWT auth)
+#   allow-metrics-scrape   metrics port 9464 ONLY from the "monitoring" namespace
+#   allow-dns-egress       DNS lookups only; no other outbound traffic, so a
+#                          compromised pod cannot exfiltrate PHI to the internet
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: healthcare
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-http
+  namespace: healthcare
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: patient-api
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-metrics-scrape
+  namespace: healthcare
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: patient-api
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9464
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: healthcare
+spec:
+  podSelector: {}
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

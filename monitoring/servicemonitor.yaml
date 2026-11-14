@@ -1,0 +1,21 @@
+# Tells Prometheus to scrape the app's separate metrics Service
+# (healthcare/patient-api-metrics, port 9464) every 15 s. The NetworkPolicy
+# allow-metrics-scrape lets only the monitoring namespace reach that port.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: patient-api
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/part-of: medsecure
+spec:
+  namespaceSelector:
+    matchNames: ["healthcare"]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: patient-api
+      app.kubernetes.io/component: metrics
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s

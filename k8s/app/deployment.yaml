@@ -1,0 +1,105 @@
+# Step 7 - Secure deployment. "__IMAGE__" is replaced by scripts/deploy.sh
+# (called from the Jenkins "Deploy" stage) with the exact image that passed
+# the Trivy gate, e.g. medsecure-patient-api:12-a1b2c3d.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: patient-api
+  namespace: healthcare
+  labels:
+    app.kubernetes.io/name: patient-api
+    app.kubernetes.io/part-of: medsecure
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0 # zero-downtime rollout
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: patient-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: patient-api
+        app.kubernetes.io/part-of: medsecure
+      annotations:
+        # Changes when the ConfigMap or Secret changes, so pods restart and
+        # pick up rotated secrets (filled in by scripts/deploy.sh).
+        checksum/config: "__CONFIG_CHECKSUM__"
+    spec:
+      serviceAccountName: patient-api
+      automountServiceAccountToken: false # the app never talks to the K8s API
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: patient-api
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent # image is loaded into minikube by the pipeline
+          ports:
+            - name: http
+              containerPort: 3000
+            - name: metrics
+              containerPort: 9464
+          envFrom:
+            - configMapRef:
+                name: patient-api-config
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: patient-api-secrets, key: JWT_SECRET }
+            - name: PHI_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef: { name: patient-api-secrets, key: PHI_ENCRYPTION_KEY }
+            - name: DOCTOR_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: patient-api-secrets, key: DOCTOR_PASSWORD }
+            - name: NURSE_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: patient-api-secrets, key: NURSE_PASSWORD }
+            - name: RECEPTIONIST_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: patient-api-secrets, key: RECEPTIONIST_PASSWORD }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+              ephemeral-storage: 16Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+              ephemeral-storage: 64Mi
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+      terminationGracePeriodSeconds: 20

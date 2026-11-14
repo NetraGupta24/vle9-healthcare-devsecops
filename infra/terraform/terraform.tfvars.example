@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+# Your current public IP:  curl -s https://checkip.amazonaws.com
+allowed_cidr = "203.0.113.10/32"
+
+# Defaults (change only if needed)
+# aws_region          = "ap-south-1"
+# instance_type       = "m7i-flex.large"
+# root_volume_gb      = 30
+# ssh_public_key_path = "~/.ssh/vle9-key.pub"
+# open_web_ports      = false
