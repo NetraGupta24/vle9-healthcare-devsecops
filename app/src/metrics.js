@@ -66,6 +66,12 @@ function createMetrics() {
   for (const r of ['success', 'failure']) loginAttempts.inc({ result: r }, 0);
   for (const r of ['bad_credentials', 'locked', 'rate_limited', 'invalid_request']) loginFailures.inc({ reason: r }, 0);
   for (const r of ['missing_token', 'invalid_token', 'expired_token', 'forbidden_role']) unauthorized.inc({ reason: r }, 0);
+  // Without this, a burst of reads right after a pod starts creates the series
+  // already at e.g. 80, increase() sees no change, and PHIBulkAccess never fires
+  // (found in the first AWS run of scripts/demo/trigger-alerts.sh).
+  for (const action of ['list', 'read', 'create', 'update_clinical']) {
+    for (const role of ['doctor', 'nurse', 'receptionist']) phiAccess.inc({ action, role }, 0);
+  }
 
   return { register, httpRequests, httpDuration, loginAttempts, loginFailures, lockouts, unauthorized, phiAccess };
 }

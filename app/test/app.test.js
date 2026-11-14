@@ -57,6 +57,19 @@ test('unknown routes return JSON 404 without stack traces', async () => {
   assert.deepEqual(res.body, { error: 'Not found' });
 });
 
+test('alerting counters exist at 0 before the first event (so increase() can fire)', async () => {
+  const { metrics } = await buildApp();
+  const text = await metrics.register.metrics();
+  for (const series of [
+    'auth_login_failures_total{reason="bad_credentials"',
+    'auth_unauthorized_requests_total{reason="forbidden_role"',
+    'phi_records_accessed_total{action="read",role="doctor"',
+    'phi_records_accessed_total{action="read",role="receptionist"',
+  ]) {
+    assert.ok(text.includes(series), `missing pre-initialised series ${series}`);
+  }
+});
+
 test('metrics server exposes security metrics and uses route templates', async () => {
   const { agent, metrics } = await buildApp();
   await agent.get('/api/patients'); // unauthenticated
