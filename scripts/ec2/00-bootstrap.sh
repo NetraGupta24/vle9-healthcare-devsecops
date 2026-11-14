@@ -49,7 +49,9 @@ PermitRootLogin no
 X11Forwarding no
 MaxAuthTries 3
 EOF
-systemctl reload ssh || systemctl reload sshd || true
+# Ubuntu 24.04 starts sshd on demand (ssh.socket): reload only if it is running;
+# otherwise the next start reads the new config anyway.
+systemctl try-reload-or-restart ssh.service 2>/dev/null || true
 
 # ---------------------------------------------------------------- Jenkins LTS
 # Jenkins rotated its apt signing key in 2026 (jenkins.io-2026.key).

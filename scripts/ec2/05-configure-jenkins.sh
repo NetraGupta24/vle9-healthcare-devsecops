@@ -44,7 +44,7 @@ if [[ ! -f "$PM_JAR" ]]; then
   echo "$(curl -fsSL "$base/jenkins-plugin-manager-$PM_VERSION.jar.sha256" | awk '{print $1}')  $PM_JAR" | sha256sum -c -
 fi
 install -d -o jenkins -g jenkins "$JENKINS_HOME/plugins"
-plugin_list=$(mktemp)
+plugin_list=$(mktemp --suffix=.txt) # the plugin manager requires a .txt/.yaml name
 grep -vE '^\s*(#|$)' jenkins/plugins.txt > "$plugin_list"
 chmod 644 "$plugin_list"
 sudo -u jenkins java -jar "$PM_JAR" --war /usr/share/java/jenkins.war \
