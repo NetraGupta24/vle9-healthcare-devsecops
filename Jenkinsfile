@@ -127,7 +127,8 @@ pipeline {
       echo 'PIPELINE BLOCKED: a security gate failed. Open the failed stage log and the archived reports/.'
     }
     cleanup {
-      sh 'docker image prune -f >/dev/null 2>&1 || true'
+      // Keep the newest 3 app images (host + minikube node) so the disk never fills up.
+      sh 'scripts/ci/prune-images.sh 3 || true'
     }
   }
 }

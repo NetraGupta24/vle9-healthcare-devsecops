@@ -27,9 +27,10 @@ apt-get install -y ca-certificates curl gnupg jq git unzip conntrack \
   docker.io docker-compose-v2
 systemctl enable --now unattended-upgrades docker
 
-# 4 GiB swap: Jenkins + SonarQube + minikube share 8 GiB of RAM.
+# 2 GiB swap: Jenkins + SonarQube + minikube share 8 GiB of RAM (4 GiB used
+# too much of the 30 GiB disk; measured swap use stays below 0.5 GiB).
 if ! swapon --show | grep -q /swapfile; then
-  fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
   grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
 fi
 
