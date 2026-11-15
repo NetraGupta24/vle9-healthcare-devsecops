@@ -140,7 +140,7 @@ Session Manager also works as a break-glass login: `aws ssm start-session --targ
 |---|---|
 | `terraform apply`: `AccessDenied ... iam:CreateRole` | Step 0.1: `VLE9TerraformRunner` not attached to the user, or `aws sts get-caller-identity` shows a different user |
 | `InvalidClientTokenId` | the access key was deleted or deactivated: create a new one (0.1 step 3) and run `aws configure` again |
-| SSH times out | Your IP changed; see above |
+| SSH hangs or times out (prints nothing) | the instance is stopped (`aws ec2 describe-instances`) or your home IP changed: update `allowed_cidr` and `terraform apply`, start the instance, `terraform apply -refresh-only` for the new IP |
 | `setup-all.sh`: "Bootstrap not finished" | wait, then `tail /var/log/medsecure-bootstrap.log` |
 | `docker: permission denied` | log out and in again (new docker group membership), or run `setup-all.sh`, which handles it |
 | SonarQube never becomes UP | `docker logs sonarqube`; check `sysctl vm.max_map_count` is 524288 |

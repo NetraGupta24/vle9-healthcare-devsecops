@@ -58,6 +58,8 @@ resource "aws_instance" "devsecops" {
   lifecycle {
     # A newer AMI or an edited bootstrap script must not silently replace
     # (and wipe) a running lab host.
-    ignore_changes = [ami, user_data]
+    # associate_public_ip_address reads as false while the instance is stopped,
+    # which would otherwise force a replacement on the next apply.
+    ignore_changes = [ami, user_data, associate_public_ip_address]
   }
 }
