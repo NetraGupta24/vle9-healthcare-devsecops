@@ -24,3 +24,6 @@ infra/terraform/tfplan
 infra/terraform/terraform.tfvars
 infra/terraform/.terraform.lock.hcl.bak
 crash.log
+
+# Personal lab report (contains name / registration number)
+report/
