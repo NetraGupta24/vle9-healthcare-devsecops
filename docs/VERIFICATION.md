@@ -46,7 +46,10 @@ These are real findings from running the pipeline's own gates against the first 
 | 17 | `05-configure-jenkins.sh` on EC2 | the plugin manager refuses a plugin list file without a `.txt`/`.yaml` name | `mktemp --suffix=.txt` |
 | 18 | **Alert demo on AWS** | `PHIBulkAccess` did not fire for 80 reads: the counter series appeared already at 80, so `increase()` saw no change | all PHI counters start at 0 (like the login counters) + regression test; pushed → build #2 → alert fired |
 | 19 | Grafana login on AWS | the admin password Secret kept the file's trailing newline, so the real password contained `\n` and could not be typed | Secret created without the newline; Grafana restarted |
-| 20 | Disk usage on AWS | root volume 89 % full after setup (scanner images, cluster, 4 GiB swap): 30 GiB is too small | freed 0.9 GiB (minikube cache) → 86 %; resizing to 40 GiB proposed |
+| 20 | Disk usage on AWS | root volume 89 % full after setup (scanner images, cluster, 4 GiB swap): 30 GiB is too small | freed 0.9 GiB (minikube cache) → 86 %; plus the fix in row 23 |
+| 21 | Restarting the instance (day 2) | SSH hung: the student's public IP alternates between two networks, and a stopped instance read as `associate_public_ip_address=false`, which made the plan **replace the whole host** | `allowed_cidrs` list (both IPs); attribute ignored in `lifecycle`; plan reviewed before every apply |
+| 22 | Jenkins after a restart | JCasC re-applies the job on start and dropped the `BASE_IMAGE`/`RUN_DAST` parameters and the polling trigger | parameters and `pollSCM` declared in the Job DSL; build #6 started by SCM change after a restart |
+| 23 | Disk on day 2 | 94 % used: every build left a 270 MB image on the host and in the node | `scripts/ci/prune-images.sh` (keep newest 3) in the pipeline's cleanup; swap 4 → 2 GiB; stable at 86 % |
 
 Accepted risks that remain are listed in [SECURITY-CONTROLS.md §3](SECURITY-CONTROLS.md#3-accepted-risks-documented-time-limited).
 
@@ -98,6 +101,8 @@ Infrastructure: `terraform apply` as the least-privilege IAM user `vle9-terrafor
 | `05-configure-jenkins.sh` | ✅ (after fix #17) plugins, admin, 3 credentials, SonarQube server, job; build #1 queued |
 | **Build #1** (manual) | ✅ all 9 stages: Gitleaks clean · 48/48 tests · npm audit + Trivy fs clean · Quality Gate PASSED · image gate passed (Alpine 3.24.4, Node 24.22.3) · deployed `1-64c32c6` · ZAP 0 FAIL / 64 PASS · 13 reports archived, ZAP HTML report published |
 | **Build #2** | ✅ "**Started by an SCM change**" (pollSCM) after pushing fix #18; all 9 stages green; deployed `2-0ec881a` |
+| Builds #3, #4, #6 | ✅ all started by an SCM change, all green; #6 pruned old images (node keeps 3, 4, 6) |
+| **Build #5** (`BASE_IMAGE=node:18-alpine`) | ✅ blocked as designed at Container Scan: `base OS alpine 3.21.3 is END-OF-LIFE`, `Node.js 18.20.8 is end-of-life`; live app unchanged |
 | `security-checks.sh` on EC2 | ✅ 19 passed, 0 failed |
 | `trigger-alerts.sh all` | ✅ responses: 401 ×45, 403 ×8, 200 ×80, brute force 401 ×18 then 429 ×12 (rate limit) |
 | Alerts firing | ✅ FailedLoginBurst, AccountLockedOut, UnauthorizedAccessSpike, PrivilegeEscalationAttempt, PatientAPIHighCPU (99.85 % of limit), PHIBulkAccess (after fix #18) |

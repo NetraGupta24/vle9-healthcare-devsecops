@@ -111,7 +111,7 @@ docs/                   setup guide, security controls, demo script, verificatio
 
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/vle9-key -N ''          # 1. SSH key
-cd infra/terraform && cp terraform.tfvars.example terraform.tfvars   # 2. set allowed_cidr
+cd infra/terraform && cp terraform.tfvars.example terraform.tfvars   # 2. set allowed_cidrs
 terraform init && terraform plan -out tfplan && terraform apply tfplan
 ssh -i ~/.ssh/vle9-key ubuntu@<public_ip>                 # 3. on the instance:
 git clone <your repo> medsecure && cd medsecure
@@ -135,7 +135,7 @@ scripts/demo/vulnerable-image-demo.sh     # handout Dockerfile vs hardened: watc
 | Secure container deployment | `scripts/demo/security-checks.sh`: PSA rejects root pods, RBAC denials, NetworkPolicy isolation, secrets encrypted in etcd, read-only non-root container |
 | Monitoring dashboards active | Grafana "MedSecure - Healthcare Security Monitoring"; `scripts/demo/trigger-alerts.sh` fires the alerts; emails land in the Mailpit inbox |
 
-Demo scripts and a screenshot checklist are in [docs/DEMO.md](docs/DEMO.md).
+Demo scripts and a screenshot checklist are in [docs/DEMO.md](docs/DEMO.md); the experiment write-up (aim, procedure, observations, result) is [docs/LAB-REPORT.md](docs/LAB-REPORT.md).
 
 ## Cost and cleanup
 

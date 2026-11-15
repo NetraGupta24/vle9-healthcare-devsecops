@@ -21,7 +21,7 @@ Every control below is implemented in this repository. The "Proof" column says h
 
 ### Infrastructure (Step 1), in `infra/terraform/`
 * Dedicated VPC; the VPC's **default security group has no rules** (CIS 5.4).
-* Security group: inbound **only TCP 22 from your /32**; outbound only 80/443. The `allowed_cidr` variable refuses `0.0.0.0/0`.
+* Security group: inbound **only TCP 22 from your own /32 addresses**; outbound only 80/443. The `allowed_cidrs` variable refuses `0.0.0.0/0`.
 * No public IP by default on the subnet; the instance asks for one explicitly.
 * IAM instance role with **one** managed policy (SSM core). It has no S3, EC2 or IAM rights.
 * **IMDSv2 required, hop limit 1**, so containers cannot steal the instance credentials (SSRF).

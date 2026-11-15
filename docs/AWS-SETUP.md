@@ -45,7 +45,7 @@ Public is fine: the repo contains no secrets (Gitleaks verifies this on every bu
 ```bash
 cd ~/VLE-9-Healthcare-DevSecOps/infra/terraform
 cp terraform.tfvars.example terraform.tfvars
-echo "allowed_cidr = \"$(curl -s https://checkip.amazonaws.com)/32\"" > terraform.tfvars
+echo "allowed_cidrs = [\"$(curl -s https://checkip.amazonaws.com)/32\"]" > terraform.tfvars
 terraform init
 terraform plan -out tfplan        # review: 15 to add, 0 to change, 0 to destroy
 terraform apply tfplan
@@ -131,7 +131,7 @@ terraform destroy
 ```
 
 If your home IP changes, SSH is refused (that is the security group working). Fix:
-`echo "allowed_cidr = \"$(curl -s https://checkip.amazonaws.com)/32\"" > terraform.tfvars && terraform apply`.
+`echo "allowed_cidrs = [\"$(curl -s https://checkip.amazonaws.com)/32\"]" > terraform.tfvars && terraform apply`.
 Session Manager also works as a break-glass login: `aws ssm start-session --target <instance_id>`.
 
 ## Troubleshooting
@@ -140,7 +140,7 @@ Session Manager also works as a break-glass login: `aws ssm start-session --targ
 |---|---|
 | `terraform apply`: `AccessDenied ... iam:CreateRole` | Step 0.1: `VLE9TerraformRunner` not attached to the user, or `aws sts get-caller-identity` shows a different user |
 | `InvalidClientTokenId` | the access key was deleted or deactivated: create a new one (0.1 step 3) and run `aws configure` again |
-| SSH hangs or times out (prints nothing) | the instance is stopped (`aws ec2 describe-instances`) or your home IP changed: update `allowed_cidr` and `terraform apply`, start the instance, `terraform apply -refresh-only` for the new IP |
+| SSH hangs or times out (prints nothing) | the instance is stopped (`aws ec2 describe-instances`) or your home IP changed: add it to `allowed_cidrs` and `terraform apply`, start the instance, `terraform apply -refresh-only` for the new IP |
 | `setup-all.sh`: "Bootstrap not finished" | wait, then `tail /var/log/medsecure-bootstrap.log` |
 | `docker: permission denied` | log out and in again (new docker group membership), or run `setup-all.sh`, which handles it |
 | SonarQube never becomes UP | `docker logs sonarqube`; check `sysctl vm.max_map_count` is 524288 |
