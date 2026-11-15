@@ -60,6 +60,20 @@ jobs:
       pipelineJob('medsecure-devsecops') {
         description('VLE-9: Secure DevSecOps pipeline for the MedSecure healthcare app (Jenkinsfile in the repo)')
         logRotator { numToKeep(15) }
+        // Declared here as well as in the Jenkinsfile: JCasC re-applies this job
+        // on every Jenkins restart, which would otherwise drop the parameters
+        // and the polling trigger until the next build ran.
+        parameters {
+          stringParam('BASE_IMAGE', '', 'DEMO: override the Docker base image. Try node:18-alpine (end-of-life) to watch the Trivy gate block the build.')
+          booleanParam('RUN_DAST', true, 'Run the OWASP ZAP baseline scan against the deployed app')
+        }
+        properties {
+          pipelineTriggers {
+            triggers {
+              pollSCM { scmpoll_spec('H/2 * * * *') }
+            }
+          }
+        }
         definition {
           cpsScm {
             scm {

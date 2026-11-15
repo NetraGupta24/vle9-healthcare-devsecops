@@ -14,22 +14,25 @@ resource "aws_security_group" "devsecops" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "ssh" {
+  for_each          = toset(var.allowed_cidrs)
   security_group_id = aws_security_group.devsecops.id
-  description       = "SSH (key only) from the allowed student IP"
-  cidr_ipv4         = var.allowed_cidr
+  description       = "SSH (key only) from an allowed student IP"
+  cidr_ipv4         = each.value
   ip_protocol       = "tcp"
   from_port         = 22
   to_port           = 22
 }
 
 resource "aws_vpc_security_group_ingress_rule" "web" {
-  for_each          = var.open_web_ports ? { jenkins = 8080, sonarqube = 9000 } : {}
+  for_each = var.open_web_ports ? {
+    for pair in setproduct(["jenkins:8080", "sonarqube:9000"], var.allowed_cidrs) : "${pair[0]} ${pair[1]}" => { port = tonumber(split(":", pair[0])[1]), cidr = pair[1], name = split(":", pair[0])[0] }
+  } : {}
   security_group_id = aws_security_group.devsecops.id
-  description       = "${each.key} from the allowed student IP (optional - prefer the SSH tunnel)"
-  cidr_ipv4         = var.allowed_cidr
+  description       = "${each.value.name} from an allowed student IP (optional - prefer the SSH tunnel)"
+  cidr_ipv4         = each.value.cidr
   ip_protocol       = "tcp"
-  from_port         = each.value
-  to_port           = each.value
+  from_port         = each.value.port
+  to_port           = each.value.port
 }
 
 resource "aws_vpc_security_group_egress_rule" "web_out" {
